@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChurchSet — Chair Layout Designer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e0c;
+    --surface: #1a1815;
+    --surface2: #232018;
+    --border: #2e2b24;
+    --accent: #e8c56d;
+    --accent2: #c4965a;
+    --text: #f0ead8;
+    --text-dim: #7a7060;
+    --text-mid: #a89880;
+    --chair: #e8c56d;
+    --chair-hover: #f5d888;
+    --section-colors: #e8c56d, #7eb8c4, #c47eb8, #7ec47e, #c47e7e, #7e9ec4;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--text-mid); font-weight: 400; font-size: 14px; margin-left: 8px; font-family: 'DM Mono', monospace; }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .btn {
+    padding: 7px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-mid);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary {
+    background: var(--accent);
+    color: #0f0e0c;
+    border-color: var(--accent);
+    font-weight: 500;
+  }
+  .btn.primary:hover { background: var(--chair-hover); }
+
+  .chair-count-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  .chair-count-badge strong { color: var(--accent); font-size: 15px; }
+
+  /* LAYOUT */
+  .workspace {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 280px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .sidebar-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .sidebar-content { flex: 1; overflow-y: auto; padding: 16px; }
+  .sidebar-content::-webkit-scrollbar { width: 4px; }
+  .sidebar-content::-webkit-scrollbar-track { background: transparent; }
+  .sidebar-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .section-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    transition: border-color 0.15s;
+    cursor: pointer;
+  }
+  .section-card:hover { border-color: var(--text-dim); }
+  .section-card.active { border-color: var(--accent); }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .section-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-right: 8px;
+  }
+  .section-name {
+    font-size: 13px;
+    font-weight: 500;
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+  }
+  .section-delete {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.15s;
+  }
+  .section-delete:hover { color: #c47e7e; }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .form-group input, .form-group select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 5px 8px;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+
+  .add-section-btn {
+    width: 100%;
+    padding: 10px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 4px;
+  }
+  .add-section-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Floor config tab */
+  .config-group { margin-bottom: 16px; }
+  .config-group h4 {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* CANVAS AREA */
+  .canvas-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  #mainCanvas {
+    position: absolute;
+    top: 0; left: 0;
+    cursor: crosshair;
+  }
+
+  .canvas-hint {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text-dim);
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  .canvas-toolbar {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .tool-btn {
+    width: 36px; height: 36px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-mid);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .tool-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .zoom-label {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text-dim);
+    text-align: center;
+  }
+
+  /* RIGHT PANEL */
+  .right-panel {
+    width: 220px;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    padding: 16px;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .right-panel h3 {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .stat-label { font-size: 12px; color: var(--text-mid); }
+  .stat-val { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--accent); }
+
+  .section-legend { margin-top: 16px; }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    font-size: 12px;
+    color: var(--text-mid);
+  }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* PROJECT MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    width: 480px;
+    max-width: 90vw;
+    transform: translateY(10px);
+    transition: transform 0.2s;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .modal p { font-size: 13px; color: var(--text-mid); margin-bottom: 20px; line-height: 1.5; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+  .projector-view {
+    background: #000;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+    margin: 12px 0;
+  }
+
+  /* Saved layouts panel */
+  .saved-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .saved-item:hover { border-color: var(--accent); }
+  .saved-item-name { font-size: 13px; }
+  .saved-item-meta { font-size: 11px; color: var(--text-dim); font-family: 'DM Mono', monospace; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--accent);
+    color: #0f0e0c;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+    z-index: 200;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div class="logo">ChurchSet <span>// layout designer</span></div>
+  </div>
+  <div class="header-actions">
+    <div class="chair-count-badge">Total chairs: <strong id="totalCount">0</strong></div>
+    <button class="btn" onclick="openSavedLayouts()">📁 Layouts</button>
+    <button class="btn" onclick="saveLayout()">💾 Save</button>
+    <button class="btn primary" onclick="openProjectorView()">📽 Projector View</button>
+  </div>
+</header>
+
+<div class="workspace">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-tabs">
+      <div class="tab active" onclick="switchTab('sections', this)">Sections</div>
+      <div class="tab" onclick="switchTab('floor', this)">Floor</div>
+      <div class="tab" onclick="switchTab('saved', this)">Saved</div>
+    </div>
+
+    <div class="sidebar-content" id="tab-sections">
+      <div id="sectionsList"></div>
+      <button class="add-section-btn" onclick="addSection()">+ Add Section</button>
+    </div>
+
+    <div class="sidebar-content" id="tab-floor" style="display:none;">
+      <div class="config-group">
+        <h4>Room Size</h4>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Width (ft)</label>
+            <input type="number" id="roomWidth" value="60" min="10" max="200" onchange="redraw()">
+          </div>
+          <div class="form-group">
+            <label>Length (ft)</label>
+            <input type="number" id="roomLength" value="80" min="10" max="200" onchange="redraw()">
+          </div>
+        </div>
+      </div>
+      <div class="config-group">
+        <h4>Stage / Front</h4>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Stage Depth (ft)</label>
+            <input type="number" id="stageDepth" value="12" min="0" max="40" onchange="redraw()">
+          </div>
+          <div class="form-group">
+            <label>Aisle Width (ft)</label>
+            <input type="number" id="aisleWidth" value="4" min="2" max="10" onchange="redraw()">
+          </div>
+        </div>
+      </div>
+      <div class="config-group">
+        <h4>Display</h4>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Chair Size (in)</label>
+            <input type="number" id="chairSize" value="18" min="12" max="24" onchange="redraw()">
+          </div>
+          <div class="form-group">
+            <label>Show Grid</label>
+            <select id="showGrid" onchange="redraw()">
+              <option value="1">Yes</option>
+              <option value="0">No</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-content" id="tab-saved" style="display:none;">
+      <div id="savedList"><p style="color:var(--text-dim);font-size:13px;">No saved layouts yet.</p></div>
+    </div>
+  </div>
+
+  <!-- CANVAS -->
+  <div class="canvas-area" id="canvasArea">
+    <canvas id="mainCanvas"></canvas>
+    <div class="canvas-toolbar">
+      <button class="tool-btn" onclick="zoomIn()" title="Zoom In">+</button>
+      <div class="zoom-label" id="zoomLabel">100%</div>
+      <button class="tool-btn" onclick="zoomOut()" title="Zoom Out">−</button>
+      <button class="tool-btn" onclick="resetZoom()" title="Reset" style="font-size:12px;">⊡</button>
+    </div>
+    <div class="canvas-hint" id="canvasHint">Select a section on the left to see its chairs on the floor</div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+    <h3>Layout Stats</h3>
+    <div class="stat-row"><span class="stat-label">Total Chairs</span><span class="stat-val" id="statTotal">0</span></div>
+    <div class="stat-row"><span class="stat-label">Sections</span><span class="stat-val" id="statSections">0</span></div>
+    <div class="stat-row"><span class="stat-label">Rows</span><span class="stat-val" id="statRows">0</span></div>
+    <div class="stat-row"><span class="stat-label">Capacity %</span><span class="stat-val" id="statCapacity">—</span></div>
+
+    <div class="section-legend" id="sectionLegend"></div>
+
+    <div style="margin-top:20px;">
+      <h3>Quick Presets</h3>
+      <button class="btn" style="width:100%;margin-bottom:6px;font-size:12px;" onclick="applyPreset('standard')">Standard 3-Section</button>
+      <button class="btn" style="width:100%;margin-bottom:6px;font-size:12px;" onclick="applyPreset('angled')">Angled Fan Layout</button>
+      <button class="btn" style="width:100%;font-size:12px;" onclick="applyPreset('single')">Single Block</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROJECTOR MODAL -->
+<div class="modal-overlay" id="projectorModal">
+  <div class="modal" style="width:700px;max-width:95vw;">
+    <h2>Projector View</h2>
+    <p>This is the full-screen projection output. Connect this tab to your projector and press <strong style="color:var(--accent);">Full Screen</strong>. The dots will be projected onto the floor — each dot = one chair placement.</p>
+    <div class="projector-view">
+      <canvas id="projectorCanvas" style="display:block;width:100%;"></canvas>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('projectorModal')">Close</button>
+      <button class="btn primary" onclick="goFullscreen()">⛶ Full Screen</button>
+    </div>
+  </div>
+</div>
+
+<!-- SAVED LAYOUTS MODAL -->
+<div class="modal-overlay" id="savedModal">
+  <div class="modal">
+    <h2>Saved Layouts</h2>
+    <p>Load a previously saved layout or manage your designs.</p>
+    <div id="savedModalList"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('savedModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const SECTION_COLORS = ['#e8c56d','#7eb8c4','#c47eb8','#7ec47e','#c47e7e','#7e9ec4','#c4b87e','#b87e7e'];
+
+let sections = [];
+let zoom = 1;
+let panX = 0, panY = 0;
+let isPanning = false;
+let panStart = {x:0, y:0};
+let activeSectionId = null;
+
+// ─── SECTION MANAGEMENT ──────────────────────────────────────────────────────
+function uid() { return Math.random().toString(36).slice(2,8); }
+
+function addSection(data) {
+  const idx = sections.length;
+  const s = data || {
+    id: uid(),
+    name: `Section ${String.fromCharCode(65+idx)}`,
+    color: SECTION_COLORS[idx % SECTION_COLORS.length],
+    rows: 8,
+    seatsPerRow: 10,
+    rowSpacing: 36,    // inches
+    seatSpacing: 22,   // inches
+    angle: idx === 0 ? 0 : idx === 1 ? -15 : 15,
+    originX: idx === 0 ? 50 : idx === 1 ? 20 : 80,  // % of floor
+    originY: 70,
+  };
+  sections.push(s);
+  renderSidebar();
+  redraw();
+  updateStats();
+}
+
+function removeSection(id) {
+  sections = sections.filter(s => s.id !== id);
+  if (activeSectionId === id) activeSectionId = null;
+  renderSidebar();
+  redraw();
+  updateStats();
+}
+
+function updateSection(id, key, val) {
+  const s = sections.find(s => s.id === id);
+  if (!s) return;
+  s[key] = isNaN(val) ? val : Number(val);
+  redraw();
+  updateStats();
+}
+
+// ─── SIDEBAR ─────────────────────────────────────────────────────────────────
+function renderSidebar() {
+  const list = document.getElementById('sectionsList');
+  list.innerHTML = '';
+  sections.forEach(s => {
+    const card = document.createElement('div');
+    card.className = 'section-card' + (s.id === activeSectionId ? ' active' : '');
+    card.onclick = () => { activeSectionId = s.id; renderSidebar(); redraw(); };
+    card.innerHTML = `
+      <div class="section-header">
+        <div class="section-dot" style="background:${s.color}"></div>
+        <input class="section-name" value="${s.name}" onclick="e=>e.stopPropagation()"
+          onchange="updateSection('${s.id}','name',this.value)">
+        <button class="section-delete" onclick="event.stopPropagation();removeSection('${s.id}')">×</button>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Rows</label>
+          <input type="number" value="${s.rows}" min="1" max="30"
+            onchange="updateSection('${s.id}','rows',this.value)"></div>
+        <div class="form-group"><label>Seats/Row</label>
+          <input type="number" value="${s.seatsPerRow}" min="1" max="30"
+            onchange="updateSection('${s.id}','seatsPerRow',this.value)"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Row Spacing (in)</label>
+          <input type="number" value="${s.rowSpacing}" min="24" max="60"
+            onchange="updateSection('${s.id}','rowSpacing',this.value)"></div>
+        <div class="form-group"><label>Seat Spacing (in)</label>
+          <input type="number" value="${s.seatSpacing}" min="16" max="40"
+            onchange="updateSection('${s.id}','seatSpacing',this.value)"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Angle (°)</label>
+          <input type="number" value="${s.angle}" min="-45" max="45"
+            onchange="updateSection('${s.id}','angle',this.value)"></div>
+        <div class="form-group"><label>H-Position (%)</label>
+          <input type="number" value="${s.originX}" min="5" max="95"
+            onchange="updateSection('${s.id}','originX',this.value)"></div>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+  updateLegend();
+}
+
+// ─── CANVAS ───────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const area = document.getElementById('canvasArea');
+  canvas.width = area.clientWidth;
+  canvas.height = area.clientHeight;
+  redraw();
+}
+
+function getRoomDims() {
+  return {
+    w: parseFloat(document.getElementById('roomWidth').value) || 60,
+    h: parseFloat(document.getElementById('roomLength').value) || 80,
+    stageDepth: parseFloat(document.getElementById('stageDepth').value) || 12,
+    aisleWidth: parseFloat(document.getElementById('aisleWidth').value) || 4,
+    chairSize: parseFloat(document.getElementById('chairSize').value) || 18,
+  };
+}
+
+// Convert feet to pixels based on zoom and canvas scale
+function getScale() {
+  const room = getRoomDims();
+  const margin = 60;
+  const scaleX = (canvas.width - margin*2) / room.w;
+  const scaleY = (canvas.height - margin*2) / room.h;
+  return Math.min(scaleX, scaleY) * zoom;
+}
+
+function ftToPx(ft) { return ft * getScale(); }
+function inToPx(inches) { return (inches / 12) * getScale(); }
+
+function roomOffset() {
+  const room = getRoomDims();
+  const scale = getScale();
+  const rw = room.w * scale, rh = room.h * scale;
+  return {
+    x: (canvas.width - rw) / 2 + panX,
+    y: (canvas.height - rh) / 2 + panY
+  };
+}
+
+function getSectionChairs(s) {
+  const room = getRoomDims();
+  const scale = getScale();
+  const off = roomOffset();
+  const chairs = [];
+  const rowSpacePx = inToPx(s.rowSpacing);
+  const seatSpacePx = inToPx(s.seatSpacing);
+  const rad = (s.angle * Math.PI) / 180;
+  const ox = off.x + (s.originX / 100) * room.w * scale;
+  const oy = off.y + (s.originY / 100) * room.h * scale;
+
+  for (let r = 0; r < s.rows; r++) {
+    const rowWidth = (s.seatsPerRow - 1) * seatSpacePx;
+    for (let c = 0; c < s.seatsPerRow; c++) {
+      const lx = (c - (s.seatsPerRow - 1) / 2) * seatSpacePx;
+      const ly = -r * rowSpacePx;
+      // Rotate
+      const rx = lx * Math.cos(rad) - ly * Math.sin(rad);
+      const ry = lx * Math.sin(rad) + ly * Math.cos(rad);
+      chairs.push({ x: ox + rx, y: oy + ry, section: s });
+    }
+  }
+  return chairs;
+}
+
+function redraw() {
+  const room = getRoomDims();
+  const scale = getScale();
+  const off = roomOffset();
+  const rw = room.w * scale, rh = room.h * scale;
+  const showGrid = document.getElementById('showGrid')?.value !== '0';
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Floor
+  ctx.fillStyle = '#161410';
+  ctx.strokeStyle = '#2a2720';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.rect(off.x, off.y, rw, rh);
+  ctx.fill();
+  ctx.stroke();
+
+  // Grid lines (ft)
+  if (showGrid) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= room.w; x += 5) {
+      ctx.beginPath();
+      ctx.moveTo(off.x + x * scale, off.y);
+      ctx.lineTo(off.x + x * scale, off.y + rh);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= room.h; y += 5) {
+      ctx.beginPath();
+      ctx.moveTo(off.x, off.y + y * scale);
+      ctx.lineTo(off.x + rw, off.y + y * scale);
+      ctx.stroke();
+    }
+  }
+
+  // Stage area
+  const stageH = room.stageDepth * scale;
+  ctx.fillStyle = 'rgba(232,197,109,0.06)';
+  ctx.fillRect(off.x, off.y, rw, stageH);
+  ctx.strokeStyle = 'rgba(232,197,109,0.3)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([6,4]);
+  ctx.beginPath();
+  ctx.moveTo(off.x, off.y + stageH);
+  ctx.lineTo(off.x + rw, off.y + stageH);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = 'rgba(232,197,109,0.4)';
+  ctx.font = '11px DM Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('STAGE / FRONT', off.x + rw/2, off.y + stageH/2 + 4);
+
+  // Room label
+  ctx.fillStyle = 'rgba(120,110,90,0.5)';
+  ctx.font = '10px DM Mono, monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(`${room.w}ft × ${room.h}ft`, off.x + 6, off.y - 8);
+
+  // All chairs
+  const chairR = inToPx(room.chairSize) / 2;
+  sections.forEach(s => {
+    const chairs = getSectionChairs(s);
+    chairs.forEach(ch => {
+      const inRoom = ch.x > off.x + chairR && ch.x < off.x + rw - chairR &&
+                     ch.y > off.y + chairR && ch.y < off.y + rh - chairR;
+      ctx.beginPath();
+      ctx.arc(ch.x, ch.y, Math.max(chairR, 3), 0, Math.PI*2);
+      if (s.id === activeSectionId) {
+        ctx.fillStyle = s.color;
+        ctx.shadowColor = s.color;
+        ctx.shadowBlur = 6;
+      } else {
+        ctx.fillStyle = inRoom ? s.color + 'cc' : s.color + '33';
+        ctx.shadowBlur = 0;
+      }
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Chair back indicator
+      ctx.beginPath();
+      ctx.arc(ch.x, ch.y, Math.max(chairR, 3), Math.PI*1.1, Math.PI*1.9);
+      ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+  });
+
+  // Aisle indicators
+  const aisleW = room.aisleWidth * scale / 2;
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = room.aisleWidth * scale;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(off.x + rw/2, off.y + stageH);
+  ctx.lineTo(off.x + rw/2, off.y + rh);
+  ctx.stroke();
+
+  updateStats();
+}
+
+// ─── STATS ───────────────────────────────────────────────────────────────────
+function updateStats() {
+  let total = 0, rows = 0;
+  sections.forEach(s => { total += s.rows * s.seatsPerRow; rows += s.rows; });
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statSections').textContent = sections.length;
+  document.getElementById('statRows').textContent = rows;
+  document.getElementById('totalCount').textContent = total;
+  const cap = total > 0 ? Math.round((total / 180) * 100) : 0;
+  document.getElementById('statCapacity').textContent = cap + '%';
+}
+
+function updateLegend() {
+  const legend = document.getElementById('sectionLegend');
+  legend.innerHTML = '<div style="font-size:10px;font-family:DM Mono,monospace;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);">Sections</div>';
+  sections.forEach(s => {
+    legend.innerHTML += `<div class="legend-item">
+      <div class="legend-dot" style="background:${s.color}"></div>
+      <span>${s.name}</span>
+      <span style="margin-left:auto;font-family:DM Mono,monospace;font-size:11px;color:var(--text-dim);">${s.rows*s.seatsPerRow}</span>
+    </div>`;
+  });
+}
+
+// ─── ZOOM / PAN ───────────────────────────────────────────────────────────────
+function zoomIn()  { zoom = Math.min(zoom * 1.25, 5); updateZoomLabel(); redraw(); }
+function zoomOut() { zoom = Math.max(zoom / 1.25, 0.3); updateZoomLabel(); redraw(); }
+function resetZoom() { zoom = 1; panX = 0; panY = 0; updateZoomLabel(); redraw(); }
+function updateZoomLabel() { document.getElementById('zoomLabel').textContent = Math.round(zoom*100)+'%'; }
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  if (e.deltaY < 0) zoomIn(); else zoomOut();
+}, { passive: false });
+
+canvas.addEventListener('mousedown', e => {
+  if (e.button === 1 || e.button === 2) {
+    isPanning = true;
+    panStart = { x: e.clientX - panX, y: e.clientY - panY };
+    canvas.style.cursor = 'grabbing';
+  }
+});
+canvas.addEventListener('mousemove', e => {
+  if (isPanning) {
+    panX = e.clientX - panStart.x;
+    panY = e.clientY - panStart.y;
+    redraw();
+  }
+});
+canvas.addEventListener('mouseup', () => { isPanning = false; canvas.style.cursor = 'crosshair'; });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  ['sections','floor','saved'].forEach(t => {
+    const el = document.getElementById('tab-'+t);
+    if (el) el.style.display = t === name ? 'block' : 'none';
+  });
+  if (name === 'saved') renderSavedTab();
+}
+
+// ─── PROJECTOR VIEW ───────────────────────────────────────────────────────────
+function openProjectorView() {
+  document.getElementById('projectorModal').classList.add('open');
+  setTimeout(() => renderProjectorCanvas(), 100);
+}
+
+function renderProjectorCanvas() {
+  const pc = document.getElementById('projectorCanvas');
+  const room = getRoomDims();
+  // 16:9 output
+  pc.width = 960;
+  pc.height = 540;
+  const pctx = pc.getContext('2d');
+
+  pctx.fillStyle = '#000';
+  pctx.fillRect(0, 0, pc.width, pc.height);
+
+  const margin = 40;
+  const scaleX = (pc.width - margin*2) / room.w;
+  const scaleY = (pc.height - margin*2) / room.h;
+  const scale = Math.min(scaleX, scaleY);
+  const rw = room.w * scale, rh = room.h * scale;
+  const ox = (pc.width - rw) / 2, oy = (pc.height - rh) / 2;
+
+  // Stage line
+  const stageH = room.stageDepth * scale;
+  pctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  pctx.lineWidth = 1;
+  pctx.setLineDash([6,4]);
+  pctx.beginPath();
+  pctx.moveTo(ox, oy + stageH);
+  pctx.lineTo(ox + rw, oy + stageH);
+  pctx.stroke();
+  pctx.setLineDash([]);
+
+  // Chairs as bright dots
+  sections.forEach(s => {
+    // Temporarily override scale for projector
+    const rowSpacePx = (s.rowSpacing / 12) * scale;
+    const seatSpacePx = (s.seatSpacing / 12) * scale;
+    const rad = (s.angle * Math.PI) / 180;
+    const sox = ox + (s.originX / 100) * rw;
+    const soy = oy + (s.originY / 100) * rh;
+    const dotR = Math.max((room.chairSize / 24) * scale * 0.4, 3);
+
+    for (let r = 0; r < s.rows; r++) {
+      for (let c = 0; c < s.seatsPerRow; c++) {
+        const lx = (c - (s.seatsPerRow - 1) / 2) * seatSpacePx;
+        const ly = -r * rowSpacePx;
+        const rx = lx * Math.cos(rad) - ly * Math.sin(rad);
+        const ry = lx * Math.sin(rad) + ly * Math.cos(rad);
+        const cx = sox + rx, cy = soy + ry;
+
+        pctx.beginPath();
+        pctx.arc(cx, cy, dotR, 0, Math.PI*2);
+        pctx.fillStyle = s.color;
+        pctx.shadowColor = s.color;
+        pctx.shadowBlur = 8;
+        pctx.fill();
+        pctx.shadowBlur = 0;
+      }
+    }
+  });
+
+  // Label
+  pctx.fillStyle = 'rgba(255,255,255,0.3)';
+  pctx.font = '11px monospace';
+  pctx.textAlign = 'center';
+  pctx.fillText('FRONT / STAGE', ox + rw/2, oy + stageH - 6);
+
+  const total = sections.reduce((a,s) => a + s.rows*s.seatsPerRow, 0);
+  pctx.fillStyle = 'rgba(232,197,109,0.6)';
+  pctx.font = 'bold 12px monospace';
+  pctx.textAlign = 'right';
+  pctx.fillText(`${total} chairs`, pc.width - 16, pc.height - 10);
+}
+
+function goFullscreen() {
+  const pc = document.getElementById('projectorCanvas');
+  if (pc.requestFullscreen) pc.requestFullscreen();
+}
+
+// ─── SAVE / LOAD ──────────────────────────────────────────────────────────────
+function saveLayout() {
+  const name = prompt('Layout name:', 'Sunday Service ' + new Date().toLocaleDateString());
+  if (!name) return;
+  const saved = JSON.parse(localStorage.getItem('churchset_layouts') || '[]');
+  saved.push({
+    name, date: new Date().toISOString(),
+    sections: JSON.parse(JSON.stringify(sections)),
+    room: {
+      w: document.getElementById('roomWidth').value,
+      h: document.getElementById('roomLength').value,
+      stageDepth: document.getElementById('stageDepth').value,
+      aisleWidth: document.getElementById('aisleWidth').value,
+    }
+  });
+  localStorage.setItem('churchset_layouts', JSON.stringify(saved));
+  showToast('Layout saved!');
+}
+
+function renderSavedTab() {
+  const saved = JSON.parse(localStorage.getItem('churchset_layouts') || '[]');
+  const el = document.getElementById('savedList');
+  if (!saved.length) { el.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">No saved layouts yet.</p>'; return; }
+  el.innerHTML = saved.map((l,i) => `
+    <div class="saved-item" onclick="loadLayout(${i})">
+      <div>
+        <div class="saved-item-name">${l.name}</div>
+        <div class="saved-item-meta">${new Date(l.date).toLocaleDateString()} · ${l.sections.reduce((a,s)=>a+s.rows*s.seatsPerRow,0)} chairs</div>
+      </div>
+      <button class="btn" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();deleteLayout(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+function loadLayout(idx) {
+  const saved = JSON.parse(localStorage.getItem('churchset_layouts') || '[]');
+  const l = saved[idx];
+  if (!l) return;
+  sections = l.sections;
+  if (l.room) {
+    document.getElementById('roomWidth').value = l.room.w;
+    document.getElementById('roomLength').value = l.room.h;
+    document.getElementById('stageDepth').value = l.room.stageDepth;
+    document.getElementById('aisleWidth').value = l.room.aisleWidth;
+  }
+  renderSidebar();
+  redraw();
+  showToast('Layout loaded!');
+}
+
+function deleteLayout(idx) {
+  const saved = JSON.parse(localStorage.getItem('churchset_layouts') || '[]');
+  saved.splice(idx, 1);
+  localStorage.setItem('churchset_layouts', JSON.stringify(saved));
+  renderSavedTab();
+}
+
+function openSavedLayouts() {
+  const saved = JSON.parse(localStorage.getItem('churchset_layouts') || '[]');
+  const list = document.getElementById('savedModalList');
+  if (!saved.length) { list.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">No saved layouts yet. Use the Save button to save your first layout.</p>'; }
+  else list.innerHTML = saved.map((l,i) => `
+    <div class="saved-item" onclick="loadLayout(${i});closeModal('savedModal')">
+      <div>
+        <div class="saved-item-name">${l.name}</div>
+        <div class="saved-item-meta">${new Date(l.date).toLocaleDateString()} · ${l.sections.reduce((a,s)=>a+s.rows*s.seatsPerRow,0)} chairs</div>
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('savedModal').classList.add('open');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ─── PRESETS ─────────────────────────────────────────────────────────────────
+function applyPreset(type) {
+  sections = [];
+  if (type === 'standard') {
+    addSection({ id:uid(), name:'Left Section',   color:SECTION_COLORS[0], rows:10, seatsPerRow:8, rowSpacing:34, seatSpacing:22, angle:-5,  originX:22, originY:80 });
+    addSection({ id:uid(), name:'Center Section', color:SECTION_COLORS[1], rows:12, seatsPerRow:12, rowSpacing:34, seatSpacing:22, angle:0,   originX:50, originY:82 });
+    addSection({ id:uid(), name:'Right Section',  color:SECTION_COLORS[2], rows:10, seatsPerRow:8, rowSpacing:34, seatSpacing:22, angle:5,   originX:78, originY:80 });
+  } else if (type === 'angled') {
+    addSection({ id:uid(), name:'Far Left',    color:SECTION_COLORS[0], rows:8, seatsPerRow:6, rowSpacing:34, seatSpacing:22, angle:-20, originX:15, originY:80 });
+    addSection({ id:uid(), name:'Left',        color:SECTION_COLORS[1], rows:10, seatsPerRow:8, rowSpacing:34, seatSpacing:22, angle:-10, originX:32, originY:82 });
+    addSection({ id:uid(), name:'Center',      color:SECTION_COLORS[2], rows:12, seatsPerRow:10, rowSpacing:34, seatSpacing:22, angle:0,  originX:50, originY:83 });
+    addSection({ id:uid(), name:'Right',       color:SECTION_COLORS[3], rows:10, seatsPerRow:8, rowSpacing:34, seatSpacing:22, angle:10,  originX:68, originY:82 });
+    addSection({ id:uid(), name:'Far Right',   color:SECTION_COLORS[4], rows:8, seatsPerRow:6, rowSpacing:34, seatSpacing:22, angle:20,  originX:85, originY:80 });
+  } else if (type === 'single') {
+    addSection({ id:uid(), name:'Main Floor', color:SECTION_COLORS[0], rows:15, seatsPerRow:14, rowSpacing:34, seatSpacing:22, angle:0, originX:50, originY:80 });
+  }
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+applyPreset('standard');
+</script>
+</body>
+</html>
