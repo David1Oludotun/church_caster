@@ -504,7 +504,7 @@
       <button class="tool-btn" onclick="zoomOut()" title="Zoom Out">−</button>
       <button class="tool-btn" onclick="resetZoom()" title="Reset" style="font-size:12px;">⊡</button>
     </div>
-    <div class="canvas-hint" id="canvasHint">Select a section on the left to see its chairs on the floor</div>
+    <div class="canvas-hint" id="canvasHint">🖱 Click &amp; drag any section to move it · Right-click drag to pan · Scroll to zoom</div>
   </div>
 
   <!-- RIGHT PANEL -->
@@ -565,6 +565,10 @@ let panX = 0, panY = 0;
 let isPanning = false;
 let panStart = {x:0, y:0};
 let activeSectionId = null;
+
+// Drag state
+let draggingSection = null;
+let dragOffsetX = 0, dragOffsetY = 0;
 
 // ─── SECTION MANAGEMENT ──────────────────────────────────────────────────────
 function uid() { return Math.random().toString(36).slice(2,8); }
@@ -643,6 +647,17 @@ function renderSidebar() {
         <div class="form-group"><label>H-Position (%)</label>
           <input type="number" value="${s.originX}" min="5" max="95"
             onchange="updateSection('${s.id}','originX',this.value)"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>V-Position (%)</label>
+          <input type="number" value="${s.originY}" min="5" max="99"
+            onchange="updateSection('${s.id}','originY',this.value)"></div>
+        <div class="form-group"><label>Color</label>
+          <input type="color" value="${s.color}" style="height:29px;padding:2px 4px;cursor:pointer;"
+            onchange="updateSection('${s.id}','color',this.value)"></div>
+      </div>
+      <div style="font-size:10px;color:var(--text-dim);font-family:'DM Mono',monospace;margin-top:4px;">
+        💡 Drag section directly on the canvas to reposition
       </div>
     `;
     list.appendChild(card);
@@ -817,6 +832,28 @@ function redraw() {
   ctx.lineTo(off.x + rw/2, off.y + rh);
   ctx.stroke();
 
+  // Draw drag handles at each section origin point
+  sections.forEach(s => {
+    const ox = off.x + (s.originX / 100) * rw;
+    const oy = off.y + (s.originY / 100) * rh;
+    ctx.shadowBlur = 0;
+    // Crosshair lines
+    ctx.strokeStyle = s.id === activeSectionId ? s.color + 'dd' : s.color + '66';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(ox - 14, oy); ctx.lineTo(ox + 14, oy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ox, oy - 14); ctx.lineTo(ox, oy + 14); ctx.stroke();
+    ctx.setLineDash([]);
+    // Handle circle
+    ctx.beginPath();
+    ctx.arc(ox, oy, 6, 0, Math.PI * 2);
+    ctx.fillStyle = s.id === activeSectionId ? s.color : s.color + '99';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
+
   updateStats();
 }
 
@@ -855,21 +892,94 @@ canvas.addEventListener('wheel', e => {
   if (e.deltaY < 0) zoomIn(); else zoomOut();
 }, { passive: false });
 
+// Hit-test: find section whose chair cluster contains the mouse point
+function hitTestSectionBody(mx, my) {
+  for (let i = sections.length - 1; i >= 0; i--) {
+    const s = sections[i];
+    const chairs = getSectionChairs(s);
+    if (!chairs.length) continue;
+    const xs = chairs.map(c => c.x), ys = chairs.map(c => c.y);
+    const minX = Math.min(...xs) - 20, maxX = Math.max(...xs) + 20;
+    const minY = Math.min(...ys) - 20, maxY = Math.max(...ys) + 20;
+    if (mx >= minX && mx <= maxX && my >= minY && my <= maxY) return s;
+  }
+  return null;
+}
+
 canvas.addEventListener('mousedown', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  if (e.button === 0) {
+    const hit = hitTestSectionBody(mx, my);
+    if (hit) {
+      draggingSection = hit;
+      activeSectionId = hit.id;
+      const room = getRoomDims();
+      const scale = getScale();
+      const off = roomOffset();
+      const ox = off.x + (hit.originX / 100) * room.w * scale;
+      const oy = off.y + (hit.originY / 100) * room.h * scale;
+      dragOffsetX = mx - ox;
+      dragOffsetY = my - oy;
+      canvas.style.cursor = 'grabbing';
+      renderSidebar();
+      redraw();
+      return;
+    }
+  }
+
   if (e.button === 1 || e.button === 2) {
     isPanning = true;
     panStart = { x: e.clientX - panX, y: e.clientY - panY };
     canvas.style.cursor = 'grabbing';
   }
 });
+
 canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  if (draggingSection) {
+    const room = getRoomDims();
+    const scale = getScale();
+    const off = roomOffset();
+    const rw = room.w * scale, rh = room.h * scale;
+    const newOx = mx - dragOffsetX;
+    const newOy = my - dragOffsetY;
+    draggingSection.originX = Math.round(Math.max(2, Math.min(98, ((newOx - off.x) / rw) * 100)));
+    draggingSection.originY = Math.round(Math.max(2, Math.min(99, ((newOy - off.y) / rh) * 100)));
+    renderSidebar();
+    redraw();
+    return;
+  }
+
   if (isPanning) {
     panX = e.clientX - panStart.x;
     panY = e.clientY - panStart.y;
     redraw();
+    return;
   }
+
+  // Hover cursor
+  const hit = hitTestSectionBody(mx, my);
+  canvas.style.cursor = hit ? 'grab' : 'default';
 });
-canvas.addEventListener('mouseup', () => { isPanning = false; canvas.style.cursor = 'crosshair'; });
+
+canvas.addEventListener('mouseup', () => {
+  if (draggingSection) { showToast(`${draggingSection.name} repositioned`); draggingSection = null; }
+  isPanning = false;
+  canvas.style.cursor = 'default';
+});
+
+canvas.addEventListener('mouseleave', () => {
+  draggingSection = null;
+  isPanning = false;
+  canvas.style.cursor = 'default';
+});
+
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 // ─── TABS ─────────────────────────────────────────────────────────────────────
