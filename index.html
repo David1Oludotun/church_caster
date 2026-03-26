@@ -451,11 +451,11 @@
         <div class="form-row">
           <div class="form-group">
             <label>Width (ft)</label>
-            <input type="number" id="roomWidth" value="60" min="10" max="200" onchange="redraw()">
+            <input type="number" id="roomWidth" value="80" min="10" max="200" onchange="redraw()">
           </div>
           <div class="form-group">
             <label>Length (ft)</label>
-            <input type="number" id="roomLength" value="80" min="10" max="200" onchange="redraw()">
+            <input type="number" id="roomLength" value="60" min="10" max="200" onchange="redraw()">
           </div>
         </div>
       </div>
@@ -584,8 +584,11 @@ function addSection(data) {
     rowSpacing: 36,    // inches
     seatSpacing: 22,   // inches
     angle: idx === 0 ? 0 : idx === 1 ? -15 : 15,
-    originX: idx === 0 ? 50 : idx === 1 ? 20 : 80,  // % of floor
+    angleMode: 'perRow',
+    rowAngles: Array.from({length: 8}, () => idx === 0 ? 0 : idx === 1 ? -15 : 15),
+    originX: idx === 0 ? 50 : idx === 1 ? 20 : 80,
     originY: 70,
+    innerAlign: 'center',
   };
   sections.push(s);
   renderSidebar();
@@ -593,8 +596,30 @@ function addSection(data) {
   updateStats();
 }
 
+function toggleAngleMode(id) {
+  const s = sections.find(s => s.id === id);
+  if (!s) return;
+  if (s.angleMode === 'block') {
+    s.angleMode = 'perRow';
+    // Initialise all rows from current block angle
+    s.rowAngles = Array.from({ length: s.rows }, (_, i) =>
+      (s.rowAngles && s.rowAngles[i] !== undefined) ? s.rowAngles[i] : s.angle
+    );
+  } else {
+    s.angleMode = 'block';
+  }
+  renderSidebar();
+  redraw();
+}
+
+function updateRowAngle(id, rowIdx, val) {
+  const s = sections.find(s => s.id === id);
+  if (!s) return;
+  s.rowAngles[rowIdx] = Number(val);
+  redraw();
+}
+
 function removeSection(id) {
-  sections = sections.filter(s => s.id !== id);
   if (activeSectionId === id) activeSectionId = null;
   renderSidebar();
   redraw();
@@ -604,8 +629,11 @@ function removeSection(id) {
 function updateSection(id, key, val) {
   const s = sections.find(s => s.id === id);
   if (!s) return;
-  if (typeof val === 'boolean') s[key] = val;
-  else s[key] = isNaN(val) ? val : Number(val);
+  if (typeof val === 'boolean') {
+    s[key] = val;
+  } else {
+    s[key] = isNaN(val) ? val : Number(val);
+  }
   redraw();
   updateStats();
 }
@@ -643,8 +671,11 @@ function renderSidebar() {
       </div>
       <div class="form-row">
         <div class="form-group"><label>Angle (°)</label>
-          <input type="number" value="${s.angle}" min="-45" max="45"
-            onchange="updateSection('${s.id}','angle',this.value)"></div>
+          <input type="range" min="-45" max="45" value="${s.angle}"
+            style="width:100%;accent-color:var(--accent);"
+            oninput="updateSection('${s.id}','angle',+this.value);this.nextElementSibling.textContent=this.value+'°'">
+          <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--accent);">${s.angle}°</span>
+        </div>
         <div class="form-group"><label>H-Position (%)</label>
           <input type="number" value="${s.originX}" min="5" max="95"
             onchange="updateSection('${s.id}','originX',this.value)"></div>
@@ -657,25 +688,16 @@ function renderSidebar() {
           <input type="color" value="${s.color}" style="height:29px;padding:2px 4px;cursor:pointer;"
             onchange="updateSection('${s.id}','color',this.value)"></div>
       </div>
-      <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
-        <input type="checkbox" id="aisle_${s.id}" ${s.splitAisle ? 'checked' : ''}
-          onchange="updateSection('${s.id}','splitAisle',this.checked)" style="accent-color:var(--accent);cursor:pointer;">
-        <label for="aisle_${s.id}" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-dim);cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;">Centre Aisle Split</label>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
-        <input type="checkbox" id="pin_${s.id}" ${s.pinInner ? 'checked' : ''}
-          onchange="updateSection('${s.id}','pinInner',this.checked);renderSidebar();" style="accent-color:var(--accent);cursor:pointer;">
-        <label for="pin_${s.id}" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-dim);cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;">Pin Inner Edge</label>
-      </div>
-      ${s.pinInner ? `
-      <div class="form-row" style="margin-top:4px;">
-        <div class="form-group"><label>Inner Side</label>
-          <select onchange="updateSection('${s.id}','innerSide',this.value)">
-            <option value="right" ${(s.innerSide||'right')==='right'?'selected':''}>Right (Left section)</option>
-            <option value="left"  ${s.innerSide==='left'?'selected':''}>Left (Right section)</option>
+      <div class="form-row">
+        <div class="form-group" style="grid-column:span 2;">
+          <label>Inner Edge Align (aisle side)</label>
+          <select onchange="updateSection('${s.id}','innerAlign',this.value)">
+            <option value="center" ${s.innerAlign==='center'?'selected':''}>Center (no pin)</option>
+            <option value="right" ${s.innerAlign==='right'?'selected':''}>Right edge pinned — Left section</option>
+            <option value="left" ${s.innerAlign==='left'?'selected':''}>Left edge pinned — Right section</option>
           </select>
         </div>
-      </div>` : ''}
+      </div>
       <div style="font-size:10px;color:var(--text-dim);font-family:'DM Mono',monospace;margin-top:4px;">
         💡 Drag section directly on the canvas to reposition
       </div>
@@ -735,83 +757,28 @@ function getSectionChairs(s) {
   const chairs = [];
   const rowSpacePx = inToPx(s.rowSpacing);
   const seatSpacePx = inToPx(s.seatSpacing);
-  const rad = (s.angle * Math.PI) / 180;
   const ox = off.x + (s.originX / 100) * room.w * scale;
   const oy = off.y + (s.originY / 100) * room.h * scale;
 
-  if (s.splitAisle) {
-    // Centre section: supports both even AND odd seat counts.
-    // Odd: centre chair sits ON the aisle line (lx=0), then pairs extend outward.
-    // Even: pairs start at +/-0.5*spacing from centre, no chair on the line.
-    const isOdd = s.seatsPerRow % 2 === 1;
-    for (let r = 0; r < s.rows; r++) {
-      const ly = -r * rowSpacePx;
-      if (isOdd) {
-        // Place centre chair at lx=0
-        let rx = 0 * Math.cos(rad) - ly * Math.sin(rad);
-        let ry = 0 * Math.sin(rad) + ly * Math.cos(rad);
-        chairs.push({ x: ox + rx, y: oy + ry, section: s });
-        // Then pairs outward
-        const halfSeats = Math.floor(s.seatsPerRow / 2);
-        for (let h = 0; h < halfSeats; h++) {
-          const offset = (h + 1) * seatSpacePx;
-          let lx = offset;
-          rx = lx * Math.cos(rad) - ly * Math.sin(rad);
-          ry = lx * Math.sin(rad) + ly * Math.cos(rad);
-          chairs.push({ x: ox + rx, y: oy + ry, section: s });
-          lx = -offset;
-          rx = lx * Math.cos(rad) - ly * Math.sin(rad);
-          ry = lx * Math.sin(rad) + ly * Math.cos(rad);
-          chairs.push({ x: ox + rx, y: oy + ry, section: s });
-        }
+  for (let r = 0; r < s.rows; r++) {
+    const pivotX = ox;
+    const pivotY = oy - r * rowSpacePx;
+
+    const rowAngle = s.angle;
+    const rad = (rowAngle * Math.PI) / 180;
+
+    for (let c = 0; c < s.seatsPerRow; c++) {
+      let lx;
+      if (s.innerAlign === 'right') {
+        lx = (c - (s.seatsPerRow - 1)) * seatSpacePx;
+      } else if (s.innerAlign === 'left') {
+        lx = c * seatSpacePx;
       } else {
-        // Even: half-offset pairs, no chair on line
-        const halfSeats = s.seatsPerRow / 2;
-        for (let h = 0; h < halfSeats; h++) {
-          const offset = (h + 0.5) * seatSpacePx;
-          let lx = offset;
-          let rx = lx * Math.cos(rad) - ly * Math.sin(rad);
-          let ry = lx * Math.sin(rad) + ly * Math.cos(rad);
-          chairs.push({ x: ox + rx, y: oy + ry, section: s });
-          lx = -offset;
-          rx = lx * Math.cos(rad) - ly * Math.sin(rad);
-          ry = lx * Math.sin(rad) + ly * Math.cos(rad);
-          chairs.push({ x: ox + rx, y: oy + ry, section: s });
-        }
+        lx = (c - (s.seatsPerRow - 1) / 2) * seatSpacePx;
       }
-    }
-  } else if (s.pinInner) {
-    // Each row is a line of chairs rotated at the section angle.
-    // The BOTTOM (front) of every row is pinned to the same baseline (oy).
-    // Rows are evenly spaced along the baseline by seatSpacePx.
-    // The angle tilts the row upward — tops fan out, bottoms stay on the line.
-    // innerSide 'right': rows are to the LEFT of origin, fans left  (left section)
-    // innerSide 'left':  rows are to the RIGHT of origin, fans right (right section)
-    const innerSide = s.innerSide || 'right';
-    for (let r = 0; r < s.rows; r++) {
-      // Baseline position of this row's bottom chair
-      // r=0 is innermost (closest to centre), r=rows-1 is outermost
-      const baseX = innerSide === 'right'
-        ? ox - r * seatSpacePx   // left section: rows spread left
-        : ox + r * seatSpacePx;  // right section: rows spread right
-      const baseY = oy;
-      // Each chair in the row goes UP the angled line from the base
-      for (let c = 0; c < s.seatsPerRow; c++) {
-        // c=0 is the bottom (front) chair, c=seatsPerRow-1 is top (back)
-        const cx = baseX - c * rowSpacePx * Math.sin(rad);
-        const cy = baseY - c * rowSpacePx * Math.cos(rad);
-        chairs.push({ x: cx, y: cy, section: s });
-      }
-    }
-  } else {
-    for (let r = 0; r < s.rows; r++) {
-      for (let c = 0; c < s.seatsPerRow; c++) {
-        const lx = (c - (s.seatsPerRow - 1) / 2) * seatSpacePx;
-        const ly = -r * rowSpacePx;
-        const rx = lx * Math.cos(rad) - ly * Math.sin(rad);
-        const ry = lx * Math.sin(rad) + ly * Math.cos(rad);
-        chairs.push({ x: ox + rx, y: oy + ry, section: s });
-      }
+      const rx = lx * Math.cos(rad);
+      const ry = lx * Math.sin(rad);
+      chairs.push({ x: pivotX + rx, y: pivotY + ry, section: s });
     }
   }
   return chairs;
@@ -906,41 +873,8 @@ function redraw() {
     });
   });
 
-  // ── Centre square + aisle ──────────────────────────────────────────────────
-  // Find the centre section (splitAisle flag) to compute the square bounds
-  const centreSec = sections.find(s => s.splitAisle);
-  if (centreSec) {
-    const seatSpacePx = inToPx(centreSec.seatSpacing);
-    const rowSpacePx  = inToPx(centreSec.rowSpacing);
-    const halfSeats   = Math.floor(centreSec.seatsPerRow / 2);
-    // Half-width: outermost seat centre + half a chair radius
-    const chairR2     = inToPx(room.chairSize) / 2;
-    const halfW       = (halfSeats - 0.5) * seatSpacePx + chairR2;
-    // Height: rows span
-    const blockH      = (centreSec.rows - 1) * rowSpacePx + chairR2 * 2;
-
-    const cox = off.x + (centreSec.originX / 100) * rw;
-    const coy = off.y + (centreSec.originY / 100) * rh;
-
-    // Centre square outline
-    ctx.save();
-    ctx.strokeStyle = 'rgba(232,197,109,0.18)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([5, 4]);
-    ctx.strokeRect(cox - halfW, coy - blockH + chairR2, halfW * 2, blockH);
-    ctx.setLineDash([]);
-
-    // Centre aisle line (solid, slightly brighter)
-    ctx.strokeStyle = 'rgba(232,197,109,0.35)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(cox, coy - blockH + chairR2);
-    ctx.lineTo(cox, coy + chairR2);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // Side aisle indicator (subtle fill band)
+  // Aisle indicators
+  const aisleW = room.aisleWidth * scale / 2;
   ctx.strokeStyle = 'rgba(255,255,255,0.05)';
   ctx.lineWidth = room.aisleWidth * scale;
   ctx.setLineDash([]);
@@ -954,6 +888,21 @@ function redraw() {
     const ox = off.x + (s.originX / 100) * rw;
     const oy = off.y + (s.originY / 100) * rh;
     ctx.shadowBlur = 0;
+
+    // Draw straight inner-edge alignment line
+    if (s.innerAlign === 'right' || s.innerAlign === 'left') {
+      ctx.strokeStyle = s.id === activeSectionId ? s.color + 'cc' : s.color + '55';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      const rowSpacePx = inToPx(s.rowSpacing);
+      const totalHeight = (s.rows - 1) * rowSpacePx;
+      ctx.beginPath();
+      ctx.moveTo(ox, oy + 20);
+      ctx.lineTo(ox, oy - totalHeight - 20);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
     // Crosshair lines
     ctx.strokeStyle = s.id === activeSectionId ? s.color + 'dd' : s.color + '66';
     ctx.lineWidth = 1;
@@ -1150,18 +1099,27 @@ function renderProjectorCanvas() {
     // Temporarily override scale for projector
     const rowSpacePx = (s.rowSpacing / 12) * scale;
     const seatSpacePx = (s.seatSpacing / 12) * scale;
-    const rad = (s.angle * Math.PI) / 180;
     const sox = ox + (s.originX / 100) * rw;
     const soy = oy + (s.originY / 100) * rh;
     const dotR = Math.max((room.chairSize / 24) * scale * 0.4, 3);
 
     for (let r = 0; r < s.rows; r++) {
+      const pivotX = sox;
+      const pivotY = soy - r * rowSpacePx;
+      const rowAngle = s.angle;
+      const rad = (rowAngle * Math.PI) / 180;
       for (let c = 0; c < s.seatsPerRow; c++) {
-        const lx = (c - (s.seatsPerRow - 1) / 2) * seatSpacePx;
-        const ly = -r * rowSpacePx;
-        const rx = lx * Math.cos(rad) - ly * Math.sin(rad);
-        const ry = lx * Math.sin(rad) + ly * Math.cos(rad);
-        const cx = sox + rx, cy = soy + ry;
+        let lx;
+        if (s.innerAlign === 'right') {
+          lx = (c - (s.seatsPerRow - 1)) * seatSpacePx;
+        } else if (s.innerAlign === 'left') {
+          lx = c * seatSpacePx;
+        } else {
+          lx = (c - (s.seatsPerRow - 1) / 2) * seatSpacePx;
+        }
+        const rx = lx * Math.cos(rad);
+        const ry = lx * Math.sin(rad);
+        const cx = pivotX + rx, cy = pivotY + ry;
 
         pctx.beginPath();
         pctx.arc(cx, cy, dotR, 0, Math.PI*2);
@@ -1270,48 +1228,15 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 function applyPreset(type) {
   sections = [];
   if (type === 'standard') {
-    // Church layout:
-    // Centre square has a centre aisle line dividing it symmetrically.
-    // Centre section chairs are split: left half and right half about the centre line.
-    // Left/Right sections: innermost chair leg starts at the edge of the centre square.
-    //
-    // Room: 60ft wide, 80ft long. Stage at top (12ft deep).
-    // Centre block occupies middle 20ft (from 20ft to 40ft, i.e. 33%–67% of width).
-    // Aisle down exact centre (50%).
-    // Centre section: seatsPerRow=10, seatSpacing=22in.
-    //   Total width = 9*22in = 198in = 16.5ft. Half = 8.25ft each side of centre.
-    //   Split into 2 sub-blocks of 5 seats: originX at 50%, chairs spread symmetrically.
-    //   We mark the section as splitAisle=true so rendering leaves a gap at centre.
-    // Centre section: split about centre aisle, symmetric halves.
-    // halfSeats=5, seatSpacing=22in → half-width = 5*22in = 110in = 9.167ft
-    // As % of 60ft room: 9.167/60 = 15.28%
-    // So centre block left inner edge = 50%-15.28% = 34.72% ≈ 35%
-    //    centre block right inner edge = 50%+15.28% = 64.72% ≈ 65%
-    addSection({ id:uid(), name:'Centre Section', color:SECTION_COLORS[1],
-      rows:10, seatsPerRow:10, rowSpacing:34, seatSpacing:22, angle:0,
-      originX:50, originY:82,
-      splitAisle: true,
-    });
-    // Left section: origin at right/inner edge of left block (35%).
-    // pinInner=true + innerSide='right' → seat 0 stays at originX, section fans left.
-    addSection({ id:uid(), name:'Left Section', color:SECTION_COLORS[0],
-      rows:10, seatsPerRow:8, rowSpacing:34, seatSpacing:22, angle:0,
-      originX:35, originY:82,
-      pinInner: true, innerSide: 'right',
-    });
-    // Right section: origin at left/inner edge of right block (65%).
-    // pinInner=true + innerSide='left' → seat 0 stays at originX, section fans right.
-    addSection({ id:uid(), name:'Right Section', color:SECTION_COLORS[2],
-      rows:10, seatsPerRow:8, rowSpacing:34, seatSpacing:22, angle:0,
-      originX:65, originY:82,
-      pinInner: true, innerSide: 'left',
-    });
+    addSection({ id:uid(), name:'Left Section',   color:SECTION_COLORS[0], rows:8, seatsPerRow:8, rowSpacing:34, seatSpacing:22, angle:-5,  angleMode:'block', rowAngles:[], originX:35, originY:85, innerAlign:'right' });
+    addSection({ id:uid(), name:'Center Section', color:SECTION_COLORS[1], rows:10, seatsPerRow:12, rowSpacing:34, seatSpacing:22, angle:0,   angleMode:'block', rowAngles:[], originX:50, originY:87, innerAlign:'center' });
+    addSection({ id:uid(), name:'Right Section',  color:SECTION_COLORS[2], rows:8, seatsPerRow:8, rowSpacing:34, seatSpacing:22, angle:5,   angleMode:'block', rowAngles:[], originX:65, originY:85, innerAlign:'left' });
   } else if (type === 'angled') {
-    addSection({ id:uid(), name:'Far Left',    color:SECTION_COLORS[0], rows:8, seatsPerRow:6, rowSpacing:34, seatSpacing:22, angle:-20, originX:15, originY:80 });
-    addSection({ id:uid(), name:'Left',        color:SECTION_COLORS[1], rows:10, seatsPerRow:8, rowSpacing:34, seatSpacing:22, angle:-10, originX:32, originY:82 });
-    addSection({ id:uid(), name:'Centre',      color:SECTION_COLORS[2], rows:12, seatsPerRow:10, rowSpacing:34, seatSpacing:22, angle:0,  originX:50, originY:83, splitAisle:true });
-    addSection({ id:uid(), name:'Right',       color:SECTION_COLORS[3], rows:10, seatsPerRow:8, rowSpacing:34, seatSpacing:22, angle:10,  originX:68, originY:82 });
-    addSection({ id:uid(), name:'Far Right',   color:SECTION_COLORS[4], rows:8, seatsPerRow:6, rowSpacing:34, seatSpacing:22, angle:20,  originX:85, originY:80 });
+    addSection({ id:uid(), name:'Far Left',    color:SECTION_COLORS[0], rows:8, seatsPerRow:6, rowSpacing:34, seatSpacing:22, angle:-20, angleMode:'block', rowAngles:[], originX:20, originY:80, innerAlign:'right' });
+    addSection({ id:uid(), name:'Left',        color:SECTION_COLORS[1], rows:10, seatsPerRow:8, rowSpacing:34, seatSpacing:22, angle:-10, angleMode:'block', rowAngles:[], originX:35, originY:82, innerAlign:'right' });
+    addSection({ id:uid(), name:'Center',      color:SECTION_COLORS[2], rows:12, seatsPerRow:10, rowSpacing:34, seatSpacing:22, angle:0,  angleMode:'block', rowAngles:[], originX:50, originY:83, innerAlign:'center' });
+    addSection({ id:uid(), name:'Right',       color:SECTION_COLORS[3], rows:10, seatsPerRow:8, rowSpacing:34, seatSpacing:22, angle:10,  angleMode:'block', rowAngles:[], originX:65, originY:82, innerAlign:'left' });
+    addSection({ id:uid(), name:'Far Right',   color:SECTION_COLORS[4], rows:8, seatsPerRow:6, rowSpacing:34, seatSpacing:22, angle:20,  angleMode:'block', rowAngles:[], originX:80, originY:80, innerAlign:'left' });
   } else if (type === 'single') {
     addSection({ id:uid(), name:'Main Floor', color:SECTION_COLORS[0], rows:15, seatsPerRow:14, rowSpacing:34, seatSpacing:22, angle:0, originX:50, originY:80 });
   }
